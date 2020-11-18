@@ -53,9 +53,6 @@ begin
 
   dres@cnFillMode = "RasterFill"
   dres@cnLevelSelectionMode = "ExplicitLevels"
-  dres@cnConstFEnableFill = True ; fill in constant or near constant fields
-  dres@cnConstFLabelBackgroundColor = "transparent"
-  dres@cnConstFLabelOn = False ; turn off the "constant field" label
   dres@cnLevels = ispan(-28, 50, 8) ; create an array of values from -28 to 50 at intervals of 8
   dres@lbOrientation = "Vertical"
 
