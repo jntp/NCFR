@@ -6,18 +6,20 @@ begin
 
 ;-- Open file
   filename = "~/Documents/Grad School/Thesis Work/NCFR Data/2017_SoCal_NCFR/20170217_18.nc"
+  filename_dem = "~/Documents/Grad School/Thesis Work/NCFR Data/DEM DATA/N32W119_SRTMGL1_hgt_HEGOUT.nc"
   a = addfile(filename, "r")
+  b = addfile(filename_dem, "r")
 
 ;-- Read variables
-  ; terrain possibly?
-  dbz = a->Reflectivity(:, :, :)
+  dbz = a->Reflectivity(:, :, :) # load reflectivity data
+  hgt = b->hgt(:, :) # load dem data
 
 ;-- Set all values equal to -2147483648 to missing, so they don't get plotted
   dbz@_FillValue = -999 ; considered missing value when equal to fill value
   dbz = where(dbz .eq. -2147483648, dbz@_FillValue, dbz) ; where dbz = ... --> dbz = fillvalue
   ntim = dimsizes(dbz(:, 0, 0))
 
-  ; ter_plot for terrain plot
+  ter_plot = new(tim, graphic) 
   dbz_plot = new(ntim, graphic)
 
 ;-- Open workstation
@@ -46,7 +48,13 @@ begin
   res@vpHeightF = 0.60
   res@tfDoNDCOverlay = True ; faster plotting if we use native map projection?
 
+  res@cnConstFEnableFill = True ; force contour fill for constant or near constant values 
+  res@cnConstFLabelBackgroundColor = "transparent" ; default is white
+
   ;- Copy common resources for terrain plot
+  tres = res
+
+
 
   ;- Copy common resources for dbz plot
   dres = res
@@ -55,6 +63,9 @@ begin
   dres@cnLevelSelectionMode = "ExplicitLevels"
   dres@cnLevels = ispan(-28, 50, 8) ; create an array of values from -28 to 50 at intervals of 8
   dres@lbOrientation = "Vertical"
+
+  dres@cnConstFEnableFill = True ; force contour fill for constant or near constant values 
+  dres@cnConstFLabelBackgroundColor = "transparent" ; default is white
 
   ;- Read in colormap so we can subset it
   cmap_r = read_colormap_file("WhViBlGrYeOrRe")
@@ -79,4 +90,5 @@ begin
 end
 
 ;-- See animate_3_1.ncl example @ ncl.ucar.edu/Applications/animate.shtml
-;-- For ispan line, why is there a segmentation fault?!?!?!
+;-- Why won't the contour fill for constant or near constant values? See example @ /Applications/Scripts/coneff_17.ncl
+;-- You left off at creating the topographic map. See example @ /Applications/Scripts/topo_8.ncl
