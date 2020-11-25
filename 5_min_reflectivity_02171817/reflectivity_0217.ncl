@@ -22,15 +22,20 @@ begin
   hgt = b->hgt({minlat:maxlat}, {minlon:maxlon}) ; load dem data
 
 ;-- Set all values equal to -2147483648 to missing, so they don't get plotted
-  dbz@_FillValue = -999 ; considered missing value when equal to fill value
-  dbz = where(dbz .eq. -2147483648, dbz@_FillValue, dbz) ; where dbz = ... --> dbz = fillvalue
+  ; dbz@_FillValue = -999 ; considered missing value when equal to fill value
+  ; dbz = where(dbz .eq. -2147483648, 0, dbz) ; where dbz = ... --> dbz = fillvalue
   ntim = dimsizes(dbz(:, 0, 0))
 
 ;-- Open workstation
   wtype = "png"
   wtype@wkWidth = 2500
   wtype@wkHeight = 2500
-  wks = gsn_open_wks(wtype, "animate") 
+  wks = gsn_open_wks(wtype, "animate")
+
+;-- Increase the workspace memory
+  setvalues NhlGetWorkspaceObjectId()
+    "wsMaximumSize": 400000000
+  end setvalues
 
 ;-- Set common resources
   res = True
@@ -59,18 +64,41 @@ begin
   res@cnConstFLabelBackgroundColor = "transparent" ; default is white
 
 ;-- Common resources for terrain plot
-  tres = res
+  ; tres = res
+  tres = True
 
   ;-- Will use this later for coloring the contours 
-  cmap = read_colormap_file("OceanLakeLandSnow")
+  ; cmap = read_colormap_file("OceanLakeLandSnow")
+
+  tres@gsnDraw = False ; turn off draw
+  tres@gsnFrame = False ; turn off frame
+
+  tres@cnFillOn = False ; turn on contour fill 
+  tres@cnLinesOn = False ; turn off contour lines
+  tres@cnLineLabelsOn = False ; turn off contour line labels
+
+  ;- Turn off subtitles
+  tres@gsnLeftString = "" 
+  tres@gsnRightString = ""
+  tres@gsnCenterString = ""
+
+  tres@lbLabelFontHeightF = 0.015 ; size of labelbar labels
+  tres@pmLabelBarOrthogonalPosF = -0.02 ; move labelbar closer to plot
+
+  ;- Keep plot from running off the frame
+  tres@vpXF = 0.08
+  tres@vpYF = 0.88
+  tres@vpWidthF = 0.80
+  tres@vpHeightF = 0.60
+  tres@tfDoNDCOverlay = True ; faster plotting if we use native map projection?
 
   tres@gsnMaximize = True ; maximize plot in frame
 
-  tres@cnFillMode = "RasterFill" ; for faster draw
-  tres@cnFillPalette = cmap(2:, :) 
-  tres@cnFillOpacityF = 0.5 ; make contours partially transparent
+  ; tres@cnFillMode = "RasterFill" ; for faster draw
+  ; tres@cnFillPalette = cmap(2:, :) 
+  ; tres@cnFillOpacityF = 0.5 ; make contours partially transparent
 
-  tres@cnInfoLabelOn = False ; turn off info labels
+  ; tres@cnInfoLabelOn = False ; turn off info labels
   tres@lbBoxLinesOn = False ; turn off labelbar box lines
   tres@lbTitleString = "elevation (meters)" ; add a labelbar title
   tres@lbTitleFontHeightF = 0.015
@@ -78,11 +106,11 @@ begin
   tres@lbLabelBarOn = False
 
   ;- Pick "nice" contour levels
-  mnmxint = nice_mnmxintvl(min(hgt), max(hgt), 18, False) ; calculate "nice" values for endpoints and spacing
-  tres@cnLevelSelectionMode = "ManualLevels"
-  tres@cnMinLevelValF = mnmxint(0)
-  tres@cnMaxLevelValF = mnmxint(1)
-  tres@cnLevelSpacingF = mnmxint(2) / 8 ; increase the number of levels by choosing a smaller spacing
+  ; mnmxint = nice_mnmxintvl(min(hgt), max(hgt), 18, False) ; calculate "nice" values for endpoints and spacing
+  ; tres@cnLevelSelectionMode = "ManualLevels"
+  ; tres@cnMinLevelValF = mnmxint(0)
+  ; tres@cnMaxLevelValF = mnmxint(1)
+  ; tres@cnLevelSpacingF = mnmxint(2) / 8 ; increase the number of levels by choosing a smaller spacing
 
   ;- Zoom in on map
   tres@mpMinLatF = minlat
@@ -96,6 +124,8 @@ begin
   tres@mpFillOn = False ; no map fill
   tres@mpOutlineOn = True ; enable drawing of map area outline
   tres@mpOutlineBoundarySets = "AllBoundaries" ; draw outlines for all the boundaries
+  tres@mpCountyLineThicknessF = 3.0 ; make county lines thicker
+  tres@mpGeophysicalLineThicknessF = 3.0 ; make coastline thicker
   tres@gsnAddCyclic = False ; don't add longitude cyclic point
 
   tres@tiMainString = "Southern California"
@@ -109,15 +139,22 @@ begin
 
   dres@cnFillMode = "RasterFill"
   dres@cnLevelSelectionMode = "ExplicitLevels"
-  dres@cnLevels = ispan(-28, 50, 8) ; create an array of values from -28 to 50 at intervals of 8
-  dres@lbOrientation = "Vertical"
+  dres@cnLevels = ispan(5, 50, 5) ; create an array of values from -28 to 50 at intervals of 8
+  dres@cnFillOpacityF = 0.75 ; make contour somewhat transparent so we can see the map 
+  
+  dres@lbTitleOn = True ; turn on title
+  dres@lbTitleString = "Reflectivity (dbz)"
+  dres@lbTitlePosition = "Center" 
+  dres@lbTitleFontHeightF = 0.010 ; make title smaller
+  dres@lbTitleDirection = "across" ; title direction
+  dres@lbOrientation = "Horizontal"
 
   dres@cnConstFEnableFill = True ; force contour fill for constant or near constant values 
   dres@cnConstFLabelBackgroundColor = "transparent" ; default is white
 
   ;- Read in colormap so we can subset it
   cmap_r = read_colormap_file("WhViBlGrYeOrRe")
-  dres@cnFillPalette = cmap_r(6:, :) ; skip the first few colors
+  dres@cnFillPalette = cmap_r(:, :) ; skip the first few colors
 
   ;- Create the terrain map with initial title, first dbz plot, and overlay
   tres@tiMainString = 0
@@ -128,6 +165,9 @@ begin
 ;-- Loop through each time step and draw a new plot
   do nt = 0, ntim - 1
     ;- Don't plot missing or constant fields
+    if (all(ismissing(dbz(nt, :, :))) .or. (min(dbz(nt, :, :)) .eq. max(dbz(nt, :, :)))) then
+      continue
+    end if
 
     ;- Use "setvalues" to update the two plots
     if (nt .gt. 0) then 
@@ -140,7 +180,7 @@ begin
     end if
 
     ;- Drawing the terrain plot will also draw dbz plot
-    draw(ter_plot(nt))
+    draw(ter_plot)
     frame(wks)
   end do
 

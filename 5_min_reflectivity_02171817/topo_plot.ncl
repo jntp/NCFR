@@ -1,8 +1,8 @@
 ;-- Create a temporary topographic plot separately
 begin
-;-- Open a file
-  topo_map = "~/Documents/Grad School/Thesis Work/NCFR Data/DEM DATA/N33W118_SRTMGL1_hgt_HEGOUT.nc"
-  b = addfile(topo_map, "r")
+;-- Open files
+  topo_map = "~/Documents/Grad School/Thesis Work/NCFR Data/DEM DATA/N32W119_SRTMGL1_hgt_HEGOUT.nc"
+  a = addfile(topo_map, "r") 
 
 ;-- Terrain Plot - Lat/lon Limits
   minlat = 32
@@ -11,9 +11,7 @@ begin
   maxlon = -117
 
 ;-- Read variables
-  hgt = b->hgt({minlat:maxlat}, {minlon:maxlon}) ; load dem data
-
-  printVarSummary(hgt)
+  hgt = a->hgt({minlat:maxlat}, {minlon:maxlon}) ; load dem data 
 
 ;--Open workstation
   wks = gsn_open_wks("png", "test_topo")
@@ -28,7 +26,7 @@ begin
 
   res@gsnDraw = False ; turn off draw
   res@gsnFrame = False ; turn off frame
-  res@cnFillOn = True ; turn on contour fill
+  res@cnFillOn = False ; turn on contour fill
   res@cnLinesOn = False ; turn off contour lines
   res@cnLineLabelsOn = False ; turn off contour line labels
 
@@ -48,13 +46,13 @@ begin
   res@tfDoNDCOverlay = True ; faster plotting if we use native map projection
 
   ;-- Will use this later for coloring the contours 
-  cmap = read_colormap_file("OceanLakeLandSnow")
+  ; cmap = read_colormap_file("OceanLakeLandSnow")
 
   res@gsnMaximize = True ; maximize plot in frame
 
-  res@cnFillMode = "RasterFill" ; for faster draw
-  res@cnFillPalette = cmap(2:, :) 
-  res@cnFillOpacityF = 0.5 ; make contours partially transparent
+  ; res@cnFillMode = "RasterFill" ; for faster draw
+  ; res@cnFillPalette = cmap(2:, :) 
+  ; res@cnFillOpacityF = 0.5 ; make contours partially transparent
 
   res@cnInfoLabelOn = False ; turn off info labels
   res@lbBoxLinesOn = False ; turn off labelbar box lines
@@ -64,33 +62,37 @@ begin
   res@lbLabelBarOn = False
 
   ;- Pick "nice" contour levels
-  mnmxint = nice_mnmxintvl(min(hgt), max(hgt), 18, False) ; calculate "nice" values for endpoints and spacing
-  res@cnLevelSelectionMode = "ManualLevels"
-  res@cnMinLevelValF = mnmxint(0)
-  res@cnMaxLevelValF = mnmxint(1)
-  res@cnLevelSpacingF = mnmxint(2) / 8 ; increase the number of levels by choosing a smaller spacing
+  ; mnmxint = nice_mnmxintvl(min(hgt), max(hgt), 18, False) ; calculate "nice" values for endpoints and spacing
+  ; res@cnLevelSelectionMode = "ManualLevels"
+  ; res@cnMinLevelValF = mnmxint(0)
+  ; res@cnMaxLevelValF = mnmxint(1)
+  ; res@cnLevelSpacingF = mnmxint(2) / 8 ; increase the number of levels by choosing a smaller spacing
+
+;-- Resources for Base Plot Only 
+  bres = res
 
   ;- Zoom in on map
-  res@mpMinLatF = minlat
-  res@mpMaxLatF = maxlat
-  res@mpMinLonF = minlon
-  res@mpMaxLonF = maxlon
-  res@mpCenterLonF = (res@mpMinLonF + res@mpMaxLonF) / 2 ; calculate midpoint
+  bres@mpMinLatF = minlat
+  bres@mpMaxLatF = maxlat
+  bres@mpMinLonF = minlon
+  bres@mpMaxLonF = maxlon
+  bres@mpCenterLonF = (bres@mpMinLonF + bres@mpMaxLonF) / 2 ; calculate midpoint
 
-  res@mpDataBaseVersion = "MediumRes"
+  bres@mpDataBaseVersion = "MediumRes"
 
-  res@mpFillOn = False ; no map fill
-  res@mpOutlineOn = True ; enable drawing of map area outline
-  res@mpOutlineBoundarySets = "AllBoundaries" ; draw outlines for all the boundaries
-  res@gsnAddCyclic = False ; don't add longitude cyclic point
+  bres@mpFillOn = False ; no map fill
+  bres@mpOutlineOn = True ; enable drawing of map area outline
+  bres@mpOutlineBoundarySets = "AllBoundaries" ; draw outlines for all the boundaries
+  bres@gsnAddCyclic = False ; don't add longitude cyclic point
 
-  res@tiMainString = "Southern California"
-  res@gsnLeftString = ""
-  res@gsnRightString = ""
-  res@pmTickMarkDisplayMode = "Always"
-  res@pmTitleZone = 4 ; move main title down a little 
+  bres@tiMainString = "Southern California"
+  bres@gsnLeftString = ""
+  bres@gsnRightString = ""
+  bres@pmTickMarkDisplayMode = "Always"
+  bres@pmTitleZone = 4 ; move main title down a little 
 
-  plot = gsn_csm_contour_map(wks, hgt, res)
+  plot = gsn_csm_contour_map(wks, hgt, bres)
+
   draw(plot)
   frame(wks)
 end
